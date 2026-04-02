@@ -46,6 +46,7 @@ namespace FavoriteTool
         private const string EmptyListMessage = "The list is empty. Drag objects ↑ here from the Project window.";
         private const string MissingAssetTitle = "[Missing Asset]";
         private const string MissingAssetMessage = "The file was deleted or moved without preserving the correct GUID.";
+        private const string RemoveButtonText = "Remove";
 
         // =========================================================================
         // Internal Unity Reflection Names
@@ -56,18 +57,20 @@ namespace FavoriteTool
         private const string ShowFolderContentsMethodName = "ShowFolderContents";
 
         // =========================================================================
-        // Layout Values
+        // Layout / Sizes
         // =========================================================================
 
         private const float ToolbarTitleWidth = 80f;
         private const float ToolbarSpacing = 3f;
+        private const float ToolbarExtraSpacing = 4f;
         private const float ClearSearchButtonWidth = 24f;
         private const float ClearAllButtonWidth = 100f;
         private const float ToolbarBottomSpacing = 6f;
+
         private const float DropAreaHeight = 35f;
         private const float DropAreaBottomSpacing = 8f;
 
-        private const float ItemIconSize = 16f;
+        private const float ItemIconSize = 20f;
         private const float ItemLeftPadding = 8f;
         private const float ItemColorBarWidth = 4f;
         private const float ItemBackgroundInset = 1f;
@@ -77,6 +80,7 @@ namespace FavoriteTool
         private const float DragHandleHeight = 22f;
         private const float ControlSpacing = 3f;
         private const float ControlBlockToContentSpacing = 6f;
+
         private const float IconToNameSpacing = 5f;
         private const float NameToPathSpacing = 8f;
         private const float NameColumnWidth = 150f;
@@ -85,6 +89,21 @@ namespace FavoriteTool
         private const float SearchFieldMaxWidth = 280f;
 
         private const float MissingRowRemoveButtonWidth = 90f;
+
+        private const int AssetNameFontSize = 14;
+        private const int AssetPathFontSize = 11;
+
+        private const float DragMarkerOffsetX = 6f;
+        private const float DragMarkerInsetX = 12f;
+        private const float DragMarkerThickness = 2f;
+        private const float DragMarkerTopOffset = 1f;
+        private const float DragMarkerBottomOffset = 2f;
+
+        private const float DragGripLineWidth = 10f;
+        private const float DragGripLineHeight = 1.6f;
+        private const float DragGripLineSpacing = 3.5f;
+
+        private const float SelectionOverlayBorderThickness = 1f;
 
         // =========================================================================
         // GUI Style Names
@@ -140,8 +159,11 @@ namespace FavoriteTool
 
         private GUIStyle _iconButtonStyle;
         private GUIStyle _dragHandleStyle;
-
+        private GUIStyle _nameLabelStyle;
+        private GUIStyle _pathLabelStyle;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Domain reload", "UDR0001:Domain Reload Analyzer", Justification = "<Ожидание>")]
         private static GUIContent _pinIcon;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Domain reload", "UDR0001:Domain Reload Analyzer", Justification = "<Ожидание>")]
         private static GUIContent _removeIcon;
 
         private static string StateFilePath
@@ -168,6 +190,8 @@ namespace FavoriteTool
 
             _iconButtonStyle = null;
             _dragHandleStyle = null;
+            _nameLabelStyle = null;
+            _pathLabelStyle = null;
         }
 
         private void OnDisable()
@@ -201,8 +225,13 @@ namespace FavoriteTool
 
         private bool EnsureStyles()
         {
-            if (_iconButtonStyle != null && _dragHandleStyle != null)
+            if (_iconButtonStyle != null
+                && _dragHandleStyle != null
+                && _nameLabelStyle != null
+                && _pathLabelStyle != null)
+            {
                 return true;
+            }
 
             if (GUI.skin == null || GUI.skin.button == null)
                 return false;
@@ -231,6 +260,22 @@ namespace FavoriteTool
                     padding = new RectOffset(0, 0, 0, 0),
                     margin = new RectOffset(0, 0, 0, 0),
                     alignment = TextAnchor.MiddleCenter
+                };
+            }
+
+            if (_nameLabelStyle == null)
+            {
+                _nameLabelStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = AssetNameFontSize
+                };
+            }
+
+            if (_pathLabelStyle == null)
+            {
+                _pathLabelStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    fontSize = AssetPathFontSize
                 };
             }
 
@@ -283,7 +328,7 @@ namespace FavoriteTool
                     GUI.FocusControl(null);
                 }
 
-                GUILayout.Space(4f);
+                GUILayout.Space(ToolbarExtraSpacing);
 
                 if (GUILayout.Button(
                         ClearAllButtonText,
@@ -521,7 +566,7 @@ namespace FavoriteTool
                 {
                     GUILayout.FlexibleSpace();
 
-                    if (GUILayout.Button("Remove", GUILayout.Width(MissingRowRemoveButtonWidth)))
+                    if (GUILayout.Button(RemoveButtonText, GUILayout.Width(MissingRowRemoveButtonWidth)))
                     {
                         removeIndex = actualIndex;
                     }
@@ -573,6 +618,24 @@ namespace FavoriteTool
                     pinToggleIndex = actualIndex;
                 }
 
+                GUILayout.Space(ControlBlockToContentSpacing);
+
+                Texture icon = AssetDatabase.GetCachedIcon(assetPath);
+                GUILayout.Label(icon, GUILayout.Width(ItemIconSize), GUILayout.Height(ItemIconSize));
+
+                GUILayout.Space(IconToNameSpacing);
+
+                GUILayout.Label(
+                    asset.name,
+                    _nameLabelStyle,
+                    GUILayout.Width(NameColumnWidth));
+
+                GUILayout.Space(NameToPathSpacing);
+
+                EditorGUILayout.LabelField(assetPath, _pathLabelStyle);
+
+                GUILayout.FlexibleSpace();
+
                 GUILayout.Space(ControlSpacing);
 
                 colorFieldRect = GUILayoutUtility.GetRect(
@@ -595,24 +658,6 @@ namespace FavoriteTool
                 {
                     removeIndex = actualIndex;
                 }
-
-                GUILayout.Space(ControlBlockToContentSpacing);
-
-                Texture icon = AssetDatabase.GetCachedIcon(assetPath);
-                GUILayout.Label(icon, GUILayout.Width(ItemIconSize), GUILayout.Height(ItemIconSize));
-
-                GUILayout.Space(IconToNameSpacing);
-
-                GUILayout.Label(
-                    asset.name,
-                    EditorStyles.boldLabel,
-                    GUILayout.Width(NameColumnWidth));
-
-                GUILayout.Space(NameToPathSpacing);
-
-                EditorGUILayout.LabelField(assetPath, EditorStyles.miniLabel);
-
-                GUILayout.FlexibleSpace();
             }
 
             EditorGUILayout.EndVertical();
@@ -727,19 +772,15 @@ namespace FavoriteTool
             if (Event.current.type != EventType.Repaint)
                 return;
 
-            float lineWidth = 10f;
-            float lineHeight = 1.6f;
-            float lineSpacing = 3.5f;
-
             float centerX = dragHandleRect.center.x;
             float centerY = dragHandleRect.center.y;
 
-            float startY = centerY - lineSpacing;
-            float lineX = centerX - lineWidth * 0.5f;
+            float startY = centerY - DragGripLineSpacing;
+            float lineX = centerX - DragGripLineWidth * 0.5f;
 
-            Rect line1 = new Rect(lineX, startY, lineWidth, lineHeight);
-            Rect line2 = new Rect(lineX, centerY - lineHeight * 0.5f, lineWidth, lineHeight);
-            Rect line3 = new Rect(lineX, centerY + lineSpacing - lineHeight, lineWidth, lineHeight);
+            Rect line1 = new Rect(lineX, startY, DragGripLineWidth, DragGripLineHeight);
+            Rect line2 = new Rect(lineX, centerY - DragGripLineHeight * 0.5f, DragGripLineWidth, DragGripLineHeight);
+            Rect line3 = new Rect(lineX, centerY + DragGripLineSpacing - DragGripLineHeight, DragGripLineWidth, DragGripLineHeight);
 
             EditorGUI.DrawRect(line1, DragGripColor);
             EditorGUI.DrawRect(line2, DragGripColor);
@@ -790,10 +831,15 @@ namespace FavoriteTool
                 return;
 
             float markerY = _dragInsertAfter
-                ? rowRect.yMax - 2f
-                : rowRect.yMin + 1f;
+                ? rowRect.yMax - DragMarkerBottomOffset
+                : rowRect.yMin + DragMarkerTopOffset;
 
-            Rect markerRect = new Rect(rowRect.x + 6f, markerY, rowRect.width - 12f, 2f);
+            Rect markerRect = new Rect(
+                rowRect.x + DragMarkerOffsetX,
+                markerY,
+                rowRect.width - DragMarkerInsetX,
+                DragMarkerThickness);
+
             EditorGUI.DrawRect(markerRect, DragMarkerColor);
         }
 
@@ -909,10 +955,10 @@ namespace FavoriteTool
                 selectedFill.a = SelectedOverlayAlpha;
                 EditorGUI.DrawRect(backgroundRect, selectedFill);
 
-                Rect top = new Rect(backgroundRect.x, backgroundRect.y, backgroundRect.width, 1f);
-                Rect bottom = new Rect(backgroundRect.x, backgroundRect.yMax - 1f, backgroundRect.width, 1f);
-                Rect left = new Rect(backgroundRect.x, backgroundRect.y, 1f, backgroundRect.height);
-                Rect right = new Rect(backgroundRect.xMax - 1f, backgroundRect.y, 1f, backgroundRect.height);
+                Rect top = new Rect(backgroundRect.x, backgroundRect.y, backgroundRect.width, SelectionOverlayBorderThickness);
+                Rect bottom = new Rect(backgroundRect.x, backgroundRect.yMax - SelectionOverlayBorderThickness, backgroundRect.width, SelectionOverlayBorderThickness);
+                Rect left = new Rect(backgroundRect.x, backgroundRect.y, SelectionOverlayBorderThickness, backgroundRect.height);
+                Rect right = new Rect(backgroundRect.xMax - SelectionOverlayBorderThickness, backgroundRect.y, SelectionOverlayBorderThickness, backgroundRect.height);
 
                 EditorGUI.DrawRect(top, SelectedOutlineColor);
                 EditorGUI.DrawRect(bottom, SelectedOutlineColor);
